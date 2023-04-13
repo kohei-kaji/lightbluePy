@@ -65,4 +65,11 @@ class Node:
     def __eq__(self, __value: object) -> bool:
         if not isinstance(__value, Node):
             return False
-        return self.rs == __value.rs and self.pf == __value.pf and self.cat == __value.cat and self.daughters == __value.daughters and self.score == __value.score and self.source == __value.source
+        return (
+            self.rs == __value.rs
+            and self.pf == __value.pf
+            and self.cat == __value.cat
+            and self.daughters == __value.daughters
+            and self.score == __value.score
+            and self.source == __value.source
+        )

@@ -1,4 +1,3 @@
-
 import cat
 import feature
 from feature import FeatureValue as FV
@@ -14,19 +13,72 @@ def defS(p: list[FV], c: list[FV]) -> cat.Cat:
     # check all features are valid (not a list)
     assert all(not isinstance(fv, list) for fv in p)
     assert all(not isinstance(fv, list) for fv in c)
-    return cat.S([feature.F(p), feature.F(c), feature.F([FV.M]), feature.F([FV.M]), feature.F([FV.M]), feature.F([FV.M]), feature.F([FV.M])])
+    return cat.S(
+        [
+            feature.F(p),
+            feature.F(c),
+            feature.F([FV.M]),
+            feature.F([FV.M]),
+            feature.F([FV.M]),
+            feature.F([FV.M]),
+            feature.F([FV.M]),
+        ]
+    )
 
 
-verb: list[FV] = [FV.V5k, FV.V5s, FV.V5t, FV.V5n, FV.V5m, FV.V5r, FV.V5w, FV.V5g, FV.V5z, FV.V5b,
-                  FV.V5IKU, FV.V5YUK, FV.V5ARU, FV.V5NAS, FV.V5TOW, FV.V1, FV.VK, FV.VS, FV.VSN, FV.VZ, FV.VURU]
+verb: list[FV] = [
+    FV.V5k,
+    FV.V5s,
+    FV.V5t,
+    FV.V5n,
+    FV.V5m,
+    FV.V5r,
+    FV.V5w,
+    FV.V5g,
+    FV.V5z,
+    FV.V5b,
+    FV.V5IKU,
+    FV.V5YUK,
+    FV.V5ARU,
+    FV.V5NAS,
+    FV.V5TOW,
+    FV.V1,
+    FV.VK,
+    FV.VS,
+    FV.VSN,
+    FV.VZ,
+    FV.VURU,
+]
 adjective: list[FV] = [FV.Aauo, FV.Ai, FV.ANAS, FV.ATII, FV.ABES]
 nomPred: list[FV] = [FV.Nda, FV.Nna, FV.Nno, FV.Nni, FV.Nemp, FV.Ntar]
 anyPos: list[FV] = verb + adjective + nomPred
-nonStem: list[FV] = [FV.Neg, FV.Cont, FV.Term, FV.Attr, FV.Hyp,
-                     FV.Imper, FV.Pre, FV.NStem, FV.VoR, FV.VoS, FV.VoE, FV.NegL, FV.TeForm]
+nonStem: list[FV] = [
+    FV.Neg,
+    FV.Cont,
+    FV.Term,
+    FV.Attr,
+    FV.Hyp,
+    FV.Imper,
+    FV.Pre,
+    FV.NStem,
+    FV.VoR,
+    FV.VoS,
+    FV.VoE,
+    FV.NegL,
+    FV.TeForm,
+]
 
-modifiableS = cat.S([feature.SF(2, anyPos), feature.SF(3, nonStem), feature.SF(
-    4, [FV.P, FV.M]), feature.SF(5, [FV.P, FV.M]), feature.SF(6, [FV.P, FV.M]), feature.F([FV.M]), feature.F([FV.M])])
+modifiableS = cat.S(
+    [
+        feature.SF(2, anyPos),
+        feature.SF(3, nonStem),
+        feature.SF(4, [FV.P, FV.M]),
+        feature.SF(5, [FV.P, FV.M]),
+        feature.SF(6, [FV.P, FV.M]),
+        feature.F([FV.M]),
+        feature.F([FV.M]),
+    ]
+)
 
 """
 verbCat :: T.Text            -- ^ a case frame (e.g. "ガヲニ")
@@ -55,19 +107,19 @@ def verbCat(caseframe: str, posF: list[FV], conjF: list[FV]) -> cat.Cat:
 
 
 def verbCat_(caseframe: str, ct: cat.Cat) -> cat.Cat:
-    if caseframe == '':
+    if caseframe == "":
         return ct
     c = caseframe[0]
     cs = caseframe[1:]
-    if c == 'ガ':
+    if c == "ガ":
         return verbCat_(cs, cat.BS(ct, cat.NP([feature.F([FV.Ga])])))
-    if c == 'ヲ':
+    if c == "ヲ":
         return verbCat_(cs, cat.BS(ct, cat.NP([feature.F([FV.O])])))
-    if c == 'ニ':
+    if c == "ニ":
         return verbCat_(cs, cat.BS(ct, cat.NP([feature.F([FV.Ni])])))
-    if c == 'ト':
+    if c == "ト":
         return verbCat_(cs, cat.BS(ct, cat.Sbar([feature.F([FV.ToCL])])))
-    if c == 'ヨ':
+    if c == "ヨ":
         return verbCat_(cs, cat.BS(ct, cat.NP([feature.F([FV.Niyotte])])))
     return verbCat_(cs, ct)
 
@@ -92,15 +144,45 @@ mmmpm = [F[M],F[M],F[M],F[P],F[M]]
 mppmm :: [Feature]
 mppmm = [F[M],F[P],F[P],F[M],F[M]]
 """
-m5: list[Feature] = [feature.F([FV.M]), feature.F(
-    [FV.M]), feature.F([FV.M]), feature.F([FV.M]), feature.F([FV.M])]
-pmmmm: list[Feature] = [feature.F([FV.P]), feature.F(
-    [FV.M]), feature.F([FV.M]), feature.F([FV.M]), feature.F([FV.M])]
-mpmmm: list[Feature] = [feature.F([FV.M]), feature.F(
-    [FV.P]), feature.F([FV.M]), feature.F([FV.M]), feature.F([FV.M])]
-mmpmm: list[Feature] = [feature.F([FV.M]), feature.F(
-    [FV.M]), feature.F([FV.P]), feature.F([FV.M]), feature.F([FV.M])]
-mmmpm: list[Feature] = [feature.F([FV.M]), feature.F(
-    [FV.M]), feature.F([FV.M]), feature.F([FV.P]), feature.F([FV.M])]
-mppmm: list[Feature] = [feature.F([FV.M]), feature.F(
-    [FV.P]), feature.F([FV.P]), feature.F([FV.M]), feature.F([FV.M])]
+m5: list[Feature] = [
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+]
+pmmmm: list[Feature] = [
+    feature.F([FV.P]),
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+]
+mpmmm: list[Feature] = [
+    feature.F([FV.M]),
+    feature.F([FV.P]),
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+]
+mmpmm: list[Feature] = [
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+    feature.F([FV.P]),
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+]
+mmmpm: list[Feature] = [
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+    feature.F([FV.P]),
+    feature.F([FV.M]),
+]
+mppmm: list[Feature] = [
+    feature.F([FV.M]),
+    feature.F([FV.P]),
+    feature.F([FV.P]),
+    feature.F([FV.M]),
+    feature.F([FV.M]),
+]

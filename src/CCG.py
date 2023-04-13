@@ -1,18 +1,14 @@
-from dataclasses import dataclass
-# enum
-from enum import Enum
 from typing import TypeVar, Optional
 
 import cat
 import feature
 from node import Node, RuleSymbol
 from cat import Cat
-from assignment import SubstData, Assignment, SubstLink, SubstVal
+from assignment import Assignment, SubstLink, SubstVal
 from feature import Feature
 from feature import FeatureValue as FV
 
 from lexicon.lexicon import constructPredicate
-from lexicon.myLexicon import load
 
 
 def unifiable(f1: list[Feature], f2: list[Feature]) -> bool:
@@ -91,7 +87,21 @@ def isBunsetsu(c: Cat) -> bool:
                     katsuyo = feat
                 case feature.SF(_, feat):
                     katsuyo = feat
-            if not {FV.Cont, FV.Term, FV.Attr, FV.Hyp, FV.Imper, FV.Pre, FV.NTerm, FV.NStem, FV.TeForm, FV.NiForm} | katsuyo:
+            if (
+                not {
+                    FV.Cont,
+                    FV.Term,
+                    FV.Attr,
+                    FV.Hyp,
+                    FV.Imper,
+                    FV.Pre,
+                    FV.NTerm,
+                    FV.NStem,
+                    FV.TeForm,
+                    FV.NiForm,
+                }
+                | katsuyo
+            ):
                 return False
             else:
                 return True
@@ -131,38 +141,49 @@ def unaryRules(_: Node, prevlist: list[Node]) -> list[Node]:
 
 def binaryRules(lnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
     return forwardFunctionCrossedSubstitutionRule(
-        lnode, rnode,
+        lnode,
+        rnode,
         forwardFunctionCrossedComposition2Rule(
-            lnode, rnode,
+            lnode,
+            rnode,
             forwardFunctionCrossedComposition1Rule(
-                lnode, rnode,
+                lnode,
+                rnode,
                 backwardFunctionComposition3Rule(
-                    lnode, rnode,
+                    lnode,
+                    rnode,
                     backwardFunctionComposition2Rule(
-                        lnode, rnode,
+                        lnode,
+                        rnode,
                         forwardFunctionComposition2Rule(
-                            lnode, rnode,
+                            lnode,
+                            rnode,
                             backwardFunctionComposition1Rule(
-                                lnode, rnode,
+                                lnode,
+                                rnode,
                                 forwardFunctionComposition1Rule(
-                                    lnode, rnode,
+                                    lnode,
+                                    rnode,
                                     backwardFunctionApplicationRule(
-                                        lnode, rnode,
+                                        lnode,
+                                        rnode,
                                         forwardFunctionApplicationRule(
                                             lnode, rnode, prevlist
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
     )
 
 
-def forwardFunctionApplicationRule(lnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def forwardFunctionApplicationRule(
+    lnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Forward function application rule."""
     if lnode.rs in [RuleSymbol.FFC1, RuleSymbol.FFC2, RuleSymbol.FFC3]:
         return prevlist
@@ -174,51 +195,59 @@ def forwardFunctionApplicationRule(lnode: Node, rnode: Node, prevlist: list[Node
                 case _:
                     inc = maximumIndexC(rnode.cat)
                     result = unifyCategory(
-                        [], [], [], rnode.cat, incrementIndexC(y1, inc))
+                        [], [], [], rnode.cat, incrementIndexC(y1, inc)
+                    )
                     if result is None:
                         return prevlist
                     else:
                         _, csub, fsub = result
-                        newcat = simulSubstituteCV(
-                            csub, fsub, incrementIndexC(x, inc))
-                        return [Node(
-                            RuleSymbol.FFA,
-                            lnode.pf + rnode.pf,
-                            newcat,
-                            [lnode, rnode],
-                            lnode.score * rnode.score,
-                            "",
-                        )] + prevlist
-        case _: return prevlist
+                        newcat = simulSubstituteCV(csub, fsub, incrementIndexC(x, inc))
+                        return [
+                            Node(
+                                RuleSymbol.FFA,
+                                lnode.pf + rnode.pf,
+                                newcat,
+                                [lnode, rnode],
+                                lnode.score * rnode.score,
+                                "",
+                            )
+                        ] + prevlist
+        case _:
+            return prevlist
 
 
-def backwardFunctionApplicationRule(lnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def backwardFunctionApplicationRule(
+    lnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Backward function application rule."""
     if rnode.rs in [RuleSymbol.BFC1, RuleSymbol.BFC2, RuleSymbol.BFC3]:
         return prevlist
     match rnode.cat:
         case cat.BS(x, y2):
             inc = maximumIndexC(lnode.cat)
-            result = unifyCategory(
-                [], [], [], lnode.cat, incrementIndexC(y2, inc))
+            result = unifyCategory([], [], [], lnode.cat, incrementIndexC(y2, inc))
             if result is None:
                 return prevlist
             else:
                 _, csub, fsub = result
-                newcat = simulSubstituteCV(
-                    csub, fsub, incrementIndexC(x, inc))
-                return [Node(
-                    RuleSymbol.BFA,
-                    lnode.pf + rnode.pf,
-                    newcat,
-                    [lnode, rnode],
-                    lnode.score * rnode.score,
-                    "",
-                )] + prevlist
-        case _: return prevlist
+                newcat = simulSubstituteCV(csub, fsub, incrementIndexC(x, inc))
+                return [
+                    Node(
+                        RuleSymbol.BFA,
+                        lnode.pf + rnode.pf,
+                        newcat,
+                        [lnode, rnode],
+                        lnode.score * rnode.score,
+                        "",
+                    )
+                ] + prevlist
+        case _:
+            return prevlist
 
 
-def forwardFunctionComposition1Rule(lnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def forwardFunctionComposition1Rule(
+    lnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Forward function composition rule."""
     if lnode.rs in [RuleSymbol.FFC1, RuleSymbol.FFC2, RuleSymbol.FFC3]:
         return prevlist
@@ -227,55 +256,60 @@ def forwardFunctionComposition1Rule(lnode: Node, rnode: Node, prevlist: list[Nod
             if isTNoncaseNP(y1):
                 return prevlist
             inc = maximumIndexC(rnode.cat)
-            result = unifyCategory(
-                [], [], [], y2, incrementIndexC(y1, inc))
+            result = unifyCategory([], [], [], y2, incrementIndexC(y1, inc))
             if result is None:
                 return prevlist
             (_, csub, fsub) = result
             _z = simulSubstituteCV(csub, fsub, z)
             if numberOfArguments(_z) > 3:
                 return prevlist
-            newcat = cat.SL(simulSubstituteCV(
-                csub, fsub, incrementIndexC(x, inc)), _z)
-            return [Node(
-                RuleSymbol.FFC1,
-                lnode.pf + rnode.pf,
-                newcat,
-                [lnode, rnode],
-                lnode.score * rnode.score,
-                "",
-            )] + prevlist
-        case _: return prevlist
+            newcat = cat.SL(simulSubstituteCV(csub, fsub, incrementIndexC(x, inc)), _z)
+            return [
+                Node(
+                    RuleSymbol.FFC1,
+                    lnode.pf + rnode.pf,
+                    newcat,
+                    [lnode, rnode],
+                    lnode.score * rnode.score,
+                    "",
+                )
+            ] + prevlist
+        case _:
+            return prevlist
 
 
-def backwardFunctionComposition1Rule(lnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def backwardFunctionComposition1Rule(
+    lnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Backward function composition rule."""
     if rnode.rs in [RuleSymbol.BFC1, RuleSymbol.BFC2, RuleSymbol.BFC3]:
         return prevlist
     match (lnode.cat, rnode.cat):
         case (cat.BS(y1, z), cat.BS(x, y2)):
             inc = maximumIndexC(lnode.cat)
-            result = unifyCategory(
-                [], [], [], y1, incrementIndexC(y2, inc))
+            result = unifyCategory([], [], [], y1, incrementIndexC(y2, inc))
             if result is None:
                 return prevlist
 
             (_, csub, fsub) = result
-            newcat = simulSubstituteCV(
-                csub, fsub, cat.BS(incrementIndexC(x, inc), z))
-            return [Node(
-                RuleSymbol.BFC1,
-                lnode.pf + rnode.pf,
-                newcat,
-                [lnode, rnode],
-                lnode.score * rnode.score,
-                "",
-            )] + prevlist
+            newcat = simulSubstituteCV(csub, fsub, cat.BS(incrementIndexC(x, inc), z))
+            return [
+                Node(
+                    RuleSymbol.BFC1,
+                    lnode.pf + rnode.pf,
+                    newcat,
+                    [lnode, rnode],
+                    lnode.score * rnode.score,
+                    "",
+                )
+            ] + prevlist
         case _:
             return prevlist
 
 
-def forwardFunctionComposition2Rule(lnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def forwardFunctionComposition2Rule(
+    lnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Forward function composition rule 2."""
     # TODO: Test required.
     if lnode.rs in [RuleSymbol.FFC1, RuleSymbol.FFC2, RuleSymbol.FFC3]:
@@ -285,8 +319,7 @@ def forwardFunctionComposition2Rule(lnode: Node, rnode: Node, prevlist: list[Nod
             if isTNoncaseNP(y1):
                 return prevlist
             inc = maximumIndexC(rnode.cat)
-            result = unifyCategory(
-                [], [], [], incrementIndexC(y1, inc), y2)
+            result = unifyCategory([], [], [], incrementIndexC(y1, inc), y2)
             if result is None:
                 return prevlist
             (_, csub, fsub) = result
@@ -294,19 +327,25 @@ def forwardFunctionComposition2Rule(lnode: Node, rnode: Node, prevlist: list[Nod
             if numberOfArguments(_z1) > 2:
                 return prevlist
             newcat = simulSubstituteCV(
-                csub, fsub, cat.SL(cat.SL(incrementIndexC(x, inc), _z1), z2))
-            return [Node(
-                RuleSymbol.FFC2,
-                lnode.pf + rnode.pf,
-                newcat,
-                [lnode, rnode],
-                lnode.score * rnode.score,
-                "",
-            )] + prevlist
-        case _: return prevlist
+                csub, fsub, cat.SL(cat.SL(incrementIndexC(x, inc), _z1), z2)
+            )
+            return [
+                Node(
+                    RuleSymbol.FFC2,
+                    lnode.pf + rnode.pf,
+                    newcat,
+                    [lnode, rnode],
+                    lnode.score * rnode.score,
+                    "",
+                )
+            ] + prevlist
+        case _:
+            return prevlist
 
 
-def backwardFunctionComposition2Rule(lnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def backwardFunctionComposition2Rule(
+    lnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Backward function composition rule 2."""
     # TODO: Test required.
     if rnode.rs in [RuleSymbol.BFC1, RuleSymbol.BFC2, RuleSymbol.BFC3]:
@@ -314,25 +353,30 @@ def backwardFunctionComposition2Rule(lnode: Node, rnode: Node, prevlist: list[No
     match (lnode.cat, rnode.cat):
         case (cat.BS(cat.BS(y1, z1), z2), cat.BS(x, y2)):
             inc = maximumIndexC(lnode.cat)
-            result = unifyCategory(
-                [], [], [], incrementIndexC(y2, inc), y1)
+            result = unifyCategory([], [], [], incrementIndexC(y2, inc), y1)
             if result is None:
                 return prevlist
             (_, csub, fsub) = result
             newcat = simulSubstituteCV(
-                csub, fsub, cat.BS(cat.BS(incrementIndexC(x, inc), z1), z2))
-            return [Node(
-                RuleSymbol.BFC2,
-                lnode.pf + rnode.pf,
-                newcat,
-                [lnode, rnode],
-                lnode.score * rnode.score,
-                "",
-            )] + prevlist
-        case _: return prevlist
+                csub, fsub, cat.BS(cat.BS(incrementIndexC(x, inc), z1), z2)
+            )
+            return [
+                Node(
+                    RuleSymbol.BFC2,
+                    lnode.pf + rnode.pf,
+                    newcat,
+                    [lnode, rnode],
+                    lnode.score * rnode.score,
+                    "",
+                )
+            ] + prevlist
+        case _:
+            return prevlist
 
 
-def backwardFunctionComposition3Rule(lnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def backwardFunctionComposition3Rule(
+    lnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Backward function composition rule 3."""
     # TODO: Test required.
     if rnode.rs in [RuleSymbol.BFC1, RuleSymbol.BFC2, RuleSymbol.BFC3]:
@@ -340,25 +384,30 @@ def backwardFunctionComposition3Rule(lnode: Node, rnode: Node, prevlist: list[No
     match (lnode.cat, rnode.cat):
         case (cat.BS(cat.BS(cat.BS(y1, z1), z2), z3), cat.BS(x, y2)):
             inc = maximumIndexC(lnode.cat)
-            result = unifyCategory(
-                [], [], [], incrementIndexC(y2, inc), y1)
+            result = unifyCategory([], [], [], incrementIndexC(y2, inc), y1)
             if result is None:
                 return prevlist
             (_, csub, fsub) = result
             newcat = simulSubstituteCV(
-                csub, fsub, cat.BS(cat.BS(cat.BS(incrementIndexC(x, inc), z1), z2), z3))
-            return [Node(
-                RuleSymbol.BFC3,
-                lnode.pf + rnode.pf,
-                newcat,
-                [lnode, rnode],
-                lnode.score * rnode.score,
-                "",
-            )] + prevlist
-        case _: return prevlist
+                csub, fsub, cat.BS(cat.BS(cat.BS(incrementIndexC(x, inc), z1), z2), z3)
+            )
+            return [
+                Node(
+                    RuleSymbol.BFC3,
+                    lnode.pf + rnode.pf,
+                    newcat,
+                    [lnode, rnode],
+                    lnode.score * rnode.score,
+                    "",
+                )
+            ] + prevlist
+        case _:
+            return prevlist
 
 
-def forwardFunctionCrossedComposition1Rule(lnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def forwardFunctionCrossedComposition1Rule(
+    lnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Forward function crossed composition rule."""
     # TODO: Test required.
     if rnode.rs in [RuleSymbol.FFC1, RuleSymbol.FFC2, RuleSymbol.FFC3]:
@@ -368,37 +417,43 @@ def forwardFunctionCrossedComposition1Rule(lnode: Node, rnode: Node, prevlist: l
             if isTNoncaseNP(y1) or not isArgumentCategory(z):
                 return prevlist
             inc = maximumIndexC(rnode.cat)
-            result = unifyCategory(
-                [], [], [], y2, incrementIndexC(y1, inc))
+            result = unifyCategory([], [], [], y2, incrementIndexC(y1, inc))
             if result is None:
                 return prevlist
             (_, csub, fsub) = result
             z_ = simulSubstituteCV(csub, fsub, z)
-            newcat = cat.BS(simulSubstituteCV(
-                csub, fsub, incrementIndexC(x, inc)), z_)
-            return [Node(
-                RuleSymbol.FFCx1,
-                lnode.pf + rnode.pf,
-                newcat,
-                [lnode, rnode],
-                lnode.score * rnode.score * 1,
-                "",
-            )] + prevlist
-        case _: return prevlist
+            newcat = cat.BS(simulSubstituteCV(csub, fsub, incrementIndexC(x, inc)), z_)
+            return [
+                Node(
+                    RuleSymbol.FFCx1,
+                    lnode.pf + rnode.pf,
+                    newcat,
+                    [lnode, rnode],
+                    lnode.score * rnode.score * 1,
+                    "",
+                )
+            ] + prevlist
+        case _:
+            return prevlist
 
 
-def forwardFunctionCrossedComposition2Rule(lnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def forwardFunctionCrossedComposition2Rule(
+    lnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Forward function crossed composition rule 2."""
     # TODO: Test required.
     if rnode.rs in [RuleSymbol.FFC1, RuleSymbol.FFC2, RuleSymbol.FFC3, RuleSymbol.EC]:
         return prevlist
     match (lnode.cat, rnode.cat):
         case (cat.SL(x, y1), cat.BS(cat.BS(y2, z1), z2)):
-            if isTNoncaseNP(y1) or not isArgumentCategory(z2) or not isArgumentCategory(z1):
+            if (
+                isTNoncaseNP(y1)
+                or not isArgumentCategory(z2)
+                or not isArgumentCategory(z1)
+            ):
                 return prevlist
             inc = maximumIndexC(rnode.cat)
-            result = unifyCategory(
-                [], [], [], incrementIndexC(y1, inc), y2)
+            result = unifyCategory([], [], [], incrementIndexC(y1, inc), y2)
             if result is None:
                 return prevlist
             (_, csub, fsub) = result
@@ -406,19 +461,25 @@ def forwardFunctionCrossedComposition2Rule(lnode: Node, rnode: Node, prevlist: l
             if numberOfArguments(z1_) > 2:
                 return prevlist
             newcat = simulSubstituteCV(
-                csub, fsub, cat.BS(cat.BS(incrementIndexC(x, inc), z1_), z2))
-            return [Node(
-                RuleSymbol.FFCx2,
-                lnode.pf + rnode.pf,
-                newcat,
-                [lnode, rnode],
-                lnode.score * rnode.score * 1,
-                "",
-            )] + prevlist
-        case _: return prevlist
+                csub, fsub, cat.BS(cat.BS(incrementIndexC(x, inc), z1_), z2)
+            )
+            return [
+                Node(
+                    RuleSymbol.FFCx2,
+                    lnode.pf + rnode.pf,
+                    newcat,
+                    [lnode, rnode],
+                    lnode.score * rnode.score * 1,
+                    "",
+                )
+            ] + prevlist
+        case _:
+            return prevlist
 
 
-def forwardFunctionCrossedSubstitutionRule(lnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def forwardFunctionCrossedSubstitutionRule(
+    lnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Forward function crossed substitution rule."""
     # TODO: Test required.
     match (lnode.cat, rnode.cat):
@@ -426,57 +487,65 @@ def forwardFunctionCrossedSubstitutionRule(lnode: Node, rnode: Node, prevlist: l
             if not isArgumentCategory(z1) or not isArgumentCategory(z2):
                 return prevlist
             inc = maximumIndexC(rnode.cat)
-            result = unifyCategory(
-                [], [], [], incrementIndexC(z1, inc), z2)
+            result = unifyCategory([], [], [], incrementIndexC(z1, inc), z2)
             if result is None:
                 return prevlist
             (z, csub1, fsub1) = result
-            result = unifyCategory(
-                csub1, fsub1, [], incrementIndexC(y1, inc), y2)
+            result = unifyCategory(csub1, fsub1, [], incrementIndexC(y1, inc), y2)
             if result is None:
                 return prevlist
             (_, csub2, fsub2) = result
-            newcat = simulSubstituteCV(
-                csub2, fsub2, cat.BS(incrementIndexC(x, inc), z))
-            return [Node(
-                RuleSymbol.FFSx,
-                lnode.pf + rnode.pf,
-                newcat,
-                [lnode, rnode],
-                lnode.score * rnode.score,
-                "",
-            )] + prevlist
-        case _: return prevlist
+            newcat = simulSubstituteCV(csub2, fsub2, cat.BS(incrementIndexC(x, inc), z))
+            return [
+                Node(
+                    RuleSymbol.FFSx,
+                    lnode.pf + rnode.pf,
+                    newcat,
+                    [lnode, rnode],
+                    lnode.score * rnode.score,
+                    "",
+                )
+            ] + prevlist
+        case _:
+            return prevlist
 
 
-def coordinationRule(lnode: Node, cnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def coordinationRule(
+    lnode: Node, cnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Coordination rule."""
     # TODO: Test required.
     if lnode.rs == RuleSymbol.COORD:
         return prevlist
     if (endsWithT(rnode.cat) or isNStem(rnode.cat)) and lnode.cat == rnode.cat:
-        return [Node(
-            RuleSymbol.COORD,
-            lnode.pf + cnode.pf + rnode.pf,
-            rnode.cat,
-            [lnode, cnode, rnode],
-            lnode.score * rnode.score,
-            "",
-        )] + prevlist
+        return [
+            Node(
+                RuleSymbol.COORD,
+                lnode.pf + cnode.pf + rnode.pf,
+                rnode.cat,
+                [lnode, cnode, rnode],
+                lnode.score * rnode.score,
+                "",
+            )
+        ] + prevlist
     return prevlist
 
 
-def parenthesisRule(lnode: Node, cnode: Node, rnode: Node, prevlist: list[Node]) -> list[Node]:
+def parenthesisRule(
+    lnode: Node, cnode: Node, rnode: Node, prevlist: list[Node]
+) -> list[Node]:
     """Parenthesis rule."""
     if lnode.cat == cat.LPAREN and rnode.cat == cat.RPAREN:
-        return [Node(
-            RuleSymbol.PAREN,
-            lnode.pf + cnode.pf + rnode.pf,
-            cnode.cat,
-            [lnode, cnode, rnode],
-            cnode.score,
-            "",
-        )] + prevlist
+        return [
+            Node(
+                RuleSymbol.PAREN,
+                lnode.pf + cnode.pf + rnode.pf,
+                cnode.cat,
+                [lnode, cnode, rnode],
+                cnode.score,
+                "",
+            )
+        ] + prevlist
     return prevlist
 
 
@@ -486,7 +555,8 @@ def numberOfArguments(c: Cat) -> int:
             return 1 + numberOfArguments(c1)
         case cat.BS(c1, _):
             return 1 + numberOfArguments(c1)
-        case _: return 0
+        case _:
+            return 0
 
 
 def maximumIndexC(c: Cat) -> int:
@@ -503,7 +573,8 @@ def maximumIndexC(c: Cat) -> int:
             return maximumIndexF(f)
         case cat.Sbar(f):
             return maximumIndexF(f)
-        case _: return 0
+        case _:
+            return 0
 
 
 def maximumIndexF(fs: list[Feature]) -> int:
@@ -522,7 +593,7 @@ def maximumIndexF(fs: list[Feature]) -> int:
 def incrementIndexC(c: Cat, i: int) -> Cat:
     match c:
         case cat.T(f, j, u):
-            return cat.T(f, i+j, incrementIndexC(u, i))
+            return cat.T(f, i + j, incrementIndexC(u, i))
         case cat.SL(c1, c2):
             return cat.SL(incrementIndexC(c1, i), incrementIndexC(c2, i))
         case cat.BS(c1, c2):
@@ -533,7 +604,8 @@ def incrementIndexC(c: Cat, i: int) -> Cat:
             return cat.Sbar(incrementIndexF(f, i))
         case cat.NP(f):
             return cat.NP(incrementIndexF(f, i))
-        case _: return c
+        case _:
+            return c
 
 
 def incrementIndexF(fs: list[Feature], i: int) -> list[Feature]:
@@ -541,9 +613,11 @@ def incrementIndexF(fs: list[Feature], i: int) -> list[Feature]:
     for f in fs:
         match f:
             case feature.SF(j, f2):
-                results.append(feature.SF(i+j, f2))
-            case feature.F(_): results.append(f)
-            case _: raise Exception("Unknown feature.")
+                results.append(feature.SF(i + j, f2))
+            case feature.F(_):
+                results.append(f)
+            case _:
+                raise Exception("Unknown feature.")
     return results
 
 
@@ -569,7 +643,8 @@ def fetchValue(sub: Assignment[T1], i: int, v: int) -> tuple[int, T1]:
         # SubstVal[T1]の場合の処理
         case SubstVal(v2):
             return (i, v2)
-        case _: return (i, v)
+        case _:
+            return (i, v)
 
 
 def simulSubstituteCV(csub: Assignment[Cat], fsub: Assignment[list[FV]], c: Cat) -> Cat:
@@ -577,33 +652,52 @@ def simulSubstituteCV(csub: Assignment[Cat], fsub: Assignment[list[FV]], c: Cat)
         case cat.T(_, i, _):
             return fetchValue(csub, i, c)[1]
         case cat.SL(ca, cb):
-            return cat.SL(simulSubstituteCV(csub, fsub, ca), simulSubstituteCV(csub, fsub, cb))
+            return cat.SL(
+                simulSubstituteCV(csub, fsub, ca), simulSubstituteCV(csub, fsub, cb)
+            )
         case cat.BS(ca, cb):
-            return cat.BS(simulSubstituteCV(csub, fsub, ca), simulSubstituteCV(csub, fsub, cb))
+            return cat.BS(
+                simulSubstituteCV(csub, fsub, ca), simulSubstituteCV(csub, fsub, cb)
+            )
         case cat.S(f):
             return cat.S(simulSubstituteFV(fsub, f))
         case cat.Sbar(f):
             return cat.Sbar(simulSubstituteFV(fsub, f))
         case cat.NP(f):
             return cat.NP(simulSubstituteFV(fsub, f))
-        case _: return c
+        case _:
+            return c
 
 
-def unifyCategory(csub: Assignment[Cat], fsub: Assignment[list[FV]], banned: list[int], c1: Cat, c2: Cat) -> Optional[tuple[Cat, Assignment[Cat], Assignment[list[FV]]]]:
+def unifyCategory(
+    csub: Assignment[Cat],
+    fsub: Assignment[list[FV]],
+    banned: list[int],
+    c1: Cat,
+    c2: Cat,
+) -> Optional[tuple[Cat, Assignment[Cat], Assignment[list[FV]]]]:
     """"""
     match c1:
         case cat.T(_, i, _):
             c1 = fetchValue(csub, i, c1)[1]
-        case _: pass
+        case _:
+            pass
 
     match c2:
         case cat.T(_, j, _):
             c2 = fetchValue(csub, j, c2)[1]
-        case _: pass
+        case _:
+            pass
     return unifyCategory2(csub, fsub, banned, c1, c2)
 
 
-def unifyCategory2(csub: Assignment[Cat], fsub: Assignment[list[FV]], banned: list[int], c1: Cat, c2: Cat) -> Optional[tuple[Cat, Assignment[Cat], Assignment[list[FV]]]]:
+def unifyCategory2(
+    csub: Assignment[Cat],
+    fsub: Assignment[list[FV]],
+    banned: list[int],
+    c1: Cat,
+    c2: Cat,
+) -> Optional[tuple[Cat, Assignment[Cat], Assignment[list[FV]]]]:
     match (c1, c2):
         case (cat.T(f1, i, u1), cat.T(f2, j, u2)):
             if i in banned or j in banned:
@@ -613,38 +707,42 @@ def unifyCategory2(csub: Assignment[Cat], fsub: Assignment[list[FV]], banned: li
             ijmax = max(i, j)
             ijmin = min(i, j)
             if f1 and f2:
-                res = unifyCategory2(csub, fsub, [ijmin]+banned, u1, u2)
+                res = unifyCategory2(csub, fsub, [ijmin] + banned, u1, u2)
                 if res is None:
                     return None
                 (u3, csub2, fsub2) = res
             elif f1:
-                res = unifyWithHead(csub, fsub, [ijmin]+banned, u1, u2)
+                res = unifyWithHead(csub, fsub, [ijmin] + banned, u1, u2)
                 if res is None:
                     return None
                 (u3, csub2, fsub2) = res
             elif f2:
-                res = unifyWithHead(csub, fsub, [ijmin]+banned, u2, u1)
+                res = unifyWithHead(csub, fsub, [ijmin] + banned, u2, u1)
                 if res is None:
                     return None
                 (u3, csub2, fsub2) = res
             else:
-                res = unifyCategory2(csub, fsub, [ijmin]+banned, u1, u2)
+                res = unifyCategory2(csub, fsub, [ijmin] + banned, u1, u2)
                 if res is None:
                     return None
                 (u3, csub2, fsub2) = res
             result = cat.T(f1 and f2, ijmin, u3)
-            return (result, alter(ijmin, SubstVal(result), alter(ijmax, SubstLink(ijmin), csub2)), fsub2)
+            return (
+                result,
+                alter(ijmin, SubstVal(result), alter(ijmax, SubstLink(ijmin), csub2)),
+                fsub2,
+            )
         case (cat.T(f, i, u), _):
             if i in banned:
                 return None
 
             if f:
-                res = unifyWithHead(csub, fsub, [i]+banned, u, c2)
+                res = unifyWithHead(csub, fsub, [i] + banned, u, c2)
                 if res is None:
                     return None
                 (c3, csub2, fsub2) = res
             else:
-                res = unifyCategory(csub, fsub, [i]+banned, u, c2)
+                res = unifyCategory(csub, fsub, [i] + banned, u, c2)
                 if res is None:
                     return None
                 (c3, csub2, fsub2) = res
@@ -653,12 +751,12 @@ def unifyCategory2(csub: Assignment[Cat], fsub: Assignment[list[FV]], banned: li
             if i in banned:
                 return None
             if f:
-                res = unifyWithHead(csub, fsub, [i]+banned, u, c1)
+                res = unifyWithHead(csub, fsub, [i] + banned, u, c1)
                 if res is None:
                     return None
                 (c3, csub2, fsub2) = res
             else:
-                res = unifyCategory(csub, fsub, [i]+banned, u, c1)
+                res = unifyCategory(csub, fsub, [i] + banned, u, c1)
                 if res is None:
                     return None
                 (c3, csub2, fsub2) = res
@@ -713,7 +811,13 @@ def unifyCategory2(csub: Assignment[Cat], fsub: Assignment[list[FV]], banned: li
             return None
 
 
-def unifyWithHead(csub: Assignment[Cat], fsub: Assignment[list[FV]], banned: list[int], c1: Cat, c2: Cat) -> Optional[tuple[Cat, Assignment[Cat], Assignment[list[FV]]]]:
+def unifyWithHead(
+    csub: Assignment[Cat],
+    fsub: Assignment[list[FV]],
+    banned: list[int],
+    c1: Cat,
+    c2: Cat,
+) -> Optional[tuple[Cat, Assignment[Cat], Assignment[list[FV]]]]:
     """
     unifies a cyntactic category `c1` (in `T True i c1`) with the head of `c2`, under a given feature assignment.
     """
@@ -733,12 +837,13 @@ def unifyWithHead(csub: Assignment[Cat], fsub: Assignment[list[FV]], banned: lis
         case cat.T(f, i, u):
             if i in banned:
                 return None
-            res = unifyCategory(csub, fsub, [i]+banned, c1, u)
+            res = unifyCategory(csub, fsub, [i] + banned, c1, u)
             if res is None:
                 return None
             (x2, csub2, fsub2) = res
             return (cat.T(f, i, x2), alter(i, SubstVal(cat.T(f, i, x2)), csub2), fsub2)
-        case _: return unifyCategory(csub, fsub, banned, c1, c2)
+        case _:
+            return unifyCategory(csub, fsub, banned, c1, c2)
 
 
 def substituteFV(fsub: Assignment[list[FV]], f1: Feature) -> Feature:
@@ -746,15 +851,19 @@ def substituteFV(fsub: Assignment[list[FV]], f1: Feature) -> Feature:
         case feature.SF(i, v):
             j, v2 = fetchValue(fsub, i, v)
             return feature.SF(j, v2)
-        case feature.F(_): return f1
-        case _: raise Exception("unrecognized feature")
+        case feature.F(_):
+            return f1
+        case _:
+            raise Exception("unrecognized feature")
 
 
 def simulSubstituteFV(fsub: Assignment[list[FV]], fs: list[Feature]) -> list[Feature]:
     return list(map(lambda f: substituteFV(fsub, f), fs))
 
 
-def unifyFeature(fsub: Assignment[list[FV]], f1: Feature, f2: Feature) -> Optional[tuple[Feature, Assignment[list[FV]]]]:
+def unifyFeature(
+    fsub: Assignment[list[FV]], f1: Feature, f2: Feature
+) -> Optional[tuple[Feature, Assignment[list[FV]]]]:
     match (f1, f2):
         case (feature.SF(i, v1), feature.SF(j, v2)):
             if i == j:
@@ -773,7 +882,12 @@ def unifyFeature(fsub: Assignment[list[FV]], f1: Feature, f2: Feature) -> Option
                 else:
                     ijmax = max(i2, j2)
                     ijmin = min(i2, j2)
-                    return (feature.SF(ijmin, v3), alter(ijmax, SubstLink(ijmin), alter(ijmin, SubstVal(v3), fsub)))
+                    return (
+                        feature.SF(ijmin, v3),
+                        alter(
+                            ijmax, SubstLink(ijmin), alter(ijmin, SubstVal(v3), fsub)
+                        ),
+                    )
         case (feature.SF(i, v1), feature.F(v2)):
             i2, v1_2 = fetchValue(fsub, i, v1)
             v3 = list(set(v1_2).intersection(v2))
@@ -794,10 +908,13 @@ def unifyFeature(fsub: Assignment[list[FV]], f1: Feature, f2: Feature) -> Option
                 return None
             else:
                 return (feature.F(v3), fsub)
-        case _: raise Exception(f"unrecognized case {f1} {f2}")
+        case _:
+            raise Exception(f"unrecognized case {f1} {f2}")
 
 
-def unifyFeatures(fsub: Assignment[list[FV]], f1: list[Feature], f2: list[Feature]) -> Optional[tuple[list[Feature], Assignment[list[FV]]]]:
+def unifyFeatures(
+    fsub: Assignment[list[FV]], f1: list[Feature], f2: list[Feature]
+) -> Optional[tuple[list[Feature], Assignment[list[FV]]]]:
     match (f1, f2):
         case ([], []):
             return ([], fsub)
@@ -810,8 +927,9 @@ def unifyFeatures(fsub: Assignment[list[FV]], f1: list[Feature], f2: list[Featur
             if res is None:
                 return None
             f3t, fsub3 = res
-            return ([f3h]+f3t, fsub3)
-        case _: return None
+            return ([f3h] + f3t, fsub3)
+        case _:
+            return None
 
 
 def wrapNode(node: Node) -> Node:
@@ -843,7 +961,7 @@ def testFFA():
         cat=cat.SL(cat.NP([feature.F([FV.Nc])]), cat.NP([feature.F([FV.Nc])])),
         daughters=[],
         score=-2,
-        source=""
+        source="",
     )
     rnode = Node(
         rs=RuleSymbol.LEX,
@@ -851,7 +969,7 @@ def testFFA():
         cat=cat.NP([feature.F([FV.Nc])]),
         daughters=[],
         score=-3,
-        source=""
+        source="",
     )
 
     result = forwardFunctionApplicationRule(lnode, rnode, [])
@@ -871,16 +989,18 @@ def testBFA():
         cat=cat.NP([feature.F([FV.Ga])]),
         daughters=[],
         score=-3,
-        source=""
+        source="",
     )
     rnode = Node(
         rs=RuleSymbol.LEX,
         pf="行く",
-        cat=cat.BS(cat.S([feature.F([FV.V5k]), feature.F(
-            [FV.Term])]), cat.NP([feature.F([FV.Ga])])),
+        cat=cat.BS(
+            cat.S([feature.F([FV.V5k]), feature.F([FV.Term])]),
+            cat.NP([feature.F([FV.Ga])]),
+        ),
         daughters=[],
         score=-4,
-        source=""
+        source="",
     )
 
     result = backwardFunctionApplicationRule(lnode, rnode, [])
@@ -900,7 +1020,7 @@ def testFFC():
         cat=cat.SL(cat.NP([feature.F([FV.Nc])]), cat.NP([feature.F([FV.Nc])])),
         daughters=[],
         score=-2,
-        source=""
+        source="",
     )
     rnode = Node(
         rs=RuleSymbol.LEX,
@@ -908,7 +1028,7 @@ def testFFC():
         cat=cat.SL(cat.NP([feature.F([FV.Nc])]), cat.NP([feature.F([FV.Nc])])),
         daughters=[],
         score=-3,
-        source=""
+        source="",
     )
 
     result = forwardFunctionComposition1Rule(lnode, rnode, [])
@@ -916,7 +1036,8 @@ def testFFC():
     assert result[0].rs == RuleSymbol.FFC1
     assert result[0].pf == ""
     assert result[0].cat == cat.SL(
-        cat.NP([feature.F([FV.Nc])]), cat.NP([feature.F([FV.Nc])]))
+        cat.NP([feature.F([FV.Nc])]), cat.NP([feature.F([FV.Nc])])
+    )
     assert result[0].daughters == [lnode, rnode]
     assert result[0].score == 6
 
@@ -926,28 +1047,32 @@ node_です = Node(
     rs=RuleSymbol.LEX,
     pf="です",
     cat=cat.BS(
-        cat.S([
-            feature.SF(1, adjective),
-            feature.F([FV.Term]),
-            feature.SF(2, [FV.P, FV.M]),
-            feature.F([FV.P]),
-            feature.F([FV.M]),
-            feature.F([FV.M]),
-            feature.F([FV.M])]
+        cat.S(
+            [
+                feature.SF(1, adjective),
+                feature.F([FV.Term]),
+                feature.SF(2, [FV.P, FV.M]),
+                feature.F([FV.P]),
+                feature.F([FV.M]),
+                feature.F([FV.M]),
+                feature.F([FV.M]),
+            ]
         ),
-        cat.S([
-            feature.SF(1, adjective),
-            feature.F([FV.Term]),
-            feature.SF(2, [FV.P, FV.M]),
-            feature.F([FV.M]),
-            feature.F([FV.M]),
-            feature.F([FV.M]),
-            feature.F([FV.M])
-        ])
+        cat.S(
+            [
+                feature.SF(1, adjective),
+                feature.F([FV.Term]),
+                feature.SF(2, [FV.P, FV.M]),
+                feature.F([FV.M]),
+                feature.F([FV.M]),
+                feature.F([FV.M]),
+                feature.F([FV.M]),
+            ]
+        ),
     ),
     daughters=[],
     score=-0.1,
-    source=""
+    source="",
 )
 
 
@@ -958,7 +1083,7 @@ def testBFC():
         cat=constructPredicate("長い", [FV.Ai], [FV.Term, FV.Attr])[0],
         daughters=[],
         score=-4,
-        source=""
+        source="",
     )
     rnode = node_です
 
@@ -967,16 +1092,18 @@ def testBFC():
     assert result[0].rs == RuleSymbol.BFC1
     assert result[0].pf == "長いです"
     assert result[0].cat == cat.BS(
-        cat.S([
-            feature.SF(1, adjective),
-            feature.F([FV.Term]),
-            feature.SF(2, [FV.P, FV.M]),
-            feature.F([FV.P]),
-            feature.F([FV.M]),
-            feature.F([FV.M]),
-            feature.F([FV.M]),
-        ]),
-        cat.NP([feature.F([FV.Ga])])
+        cat.S(
+            [
+                feature.SF(1, adjective),
+                feature.F([FV.Term]),
+                feature.SF(2, [FV.P, FV.M]),
+                feature.F([FV.P]),
+                feature.F([FV.M]),
+                feature.F([FV.M]),
+                feature.F([FV.M]),
+            ]
+        ),
+        cat.NP([feature.F([FV.Ga])]),
     )
     assert result[0].daughters == [lnode, rnode]
     assert result[0].score == 0.4

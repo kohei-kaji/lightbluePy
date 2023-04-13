@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TypeAlias, Union, TypeVar, Generic
+from typing import TypeAlias, Union
 
 from feature import Feature
 
@@ -58,5 +58,4 @@ class T:
     restriction: "Cat"
 
 
-Cat: TypeAlias = Union[S, NP, N, Sbar,
-                       CONJ, LPAREN, RPAREN, SL, BS, T]
+Cat: TypeAlias = Union[S, NP, N, Sbar, CONJ, LPAREN, RPAREN, SL, BS, T]

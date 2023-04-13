@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import TypeAlias, Union, TypeVar, Generic
 
+
 @dataclass
 class SubstLink:
     index: int

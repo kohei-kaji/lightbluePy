@@ -2,12 +2,9 @@ from feature import FeatureValue as FV
 import feature
 import cat
 from node import Node
-from lexicon.myLexicon import emptyCategories, myLexicon
+from lexicon.myLexicon import myLexicon
 from lexicon.template import defS, lexicalitem, modifiableS, anyPos, verbCat, verb
-from lexicon.juman import jumanCompoundNouns
 from cat import Cat
-
-from functools import reduce
 
 
 def setupLexicon(sentence: str) -> list[Node]:
@@ -15,8 +12,9 @@ def setupLexicon(sentence: str) -> list[Node]:
     with open("source/lexicon/Juman.dic.tsv") as f:
         jumandic = f.read()
         jumandic = [line for line in jumandic.split("\n") if line]
-    jumandicFiltered = filter(lambda l: l[0] in sentence,
-                              map(lambda l: l.split("\t"), jumandic))
+    jumandicFiltered = filter(
+        lambda l: l[0] in sentence, map(lambda l: l.split("\t"), jumandic)
+    )
 
     jumandicParsed = []
     cn: dict[str, tuple[str, int]] = dict()
@@ -29,10 +27,28 @@ def setupLexicon(sentence: str) -> list[Node]:
     # 3. Setting up compound nouns (returned from an execution of JUMAN)
     jumanCN = []  # jumanCompoundNouns(sentence.replace("―", "、"))
     # 4. Accumulating common nons and proper names entries
-    commonnouns = list(map(lambda l: lexicalitem(
-        l[0], "(CN)", int(l[1][1]), cat.N), cn.items()))
-    propernames = list(map(lambda l: lexicalitem(l[0], "(PN)", int(l[1][1]), cat.BS(cat.SL(cat.T(True, 1, modifiableS), cat.BS(cat.T(
-        True, 1, modifiableS), cat.NP([feature.F([FV.Nc])]))), cat.NP([feature.F([FV.Nc])]))), pn.items()))
+    commonnouns = list(
+        map(lambda l: lexicalitem(l[0], "(CN)", int(l[1][1]), cat.N), cn.items())
+    )
+    propernames = list(
+        map(
+            lambda l: lexicalitem(
+                l[0],
+                "(PN)",
+                int(l[1][1]),
+                cat.BS(
+                    cat.SL(
+                        cat.T(True, 1, modifiableS),
+                        cat.BS(
+                            cat.T(True, 1, modifiableS), cat.NP([feature.F([FV.Nc])])
+                        ),
+                    ),
+                    cat.NP([feature.F([FV.Nc])]),
+                ),
+            ),
+            pn.items(),
+        )
+    )
     # 5. 1+2+3+4
     print([(lex.pf, lex.source, lex.rs) for lex in jumandicParsed])
     print([(lex.pf, lex.source) for lex in commonnouns])
@@ -40,32 +56,49 @@ def setupLexicon(sentence: str) -> list[Node]:
     print([(lex.pf, lex.source) for lex in propernames])
     print([(lex.pf, lex.source) for lex in jumanCN])
 
-    numeration = jumandicParsed + commonnouns + \
-        mylexiconFiltered + propernames + jumanCN
+    numeration = (
+        jumandicParsed + commonnouns + mylexiconFiltered + propernames + jumanCN
+    )
 
     return numeration
 
 
-def parseJumanLine(lexicalitems: list[Node], jumanline: list[str], commonnouns: dict[str, tuple[str, int]], propernames: dict[str, tuple[str, int]]) -> None:
+def parseJumanLine(
+    lexicalitems: list[Node],
+    jumanline: list[str],
+    commonnouns: dict[str, tuple[str, int]],
+    propernames: dict[str, tuple[str, int]],
+) -> None:
     if len(jumanline) == 0:
         return
     # 相容れな	99	形容詞:イ形容詞アウオ段	相容れない	あいいれない	ContentW
     hyoki, score, cat, daihyo, yomi, source, caseframe = jumanline
     if cat.startswith("名詞:普通名詞"):
-        commonnouns[hyoki] = (daihyo+"/"+yomi, int(score))
-    elif cat.startswith("名詞:固有名詞") or cat.startswith("名詞:人名") or cat.startswith("名詞:地名") or cat.startswith("名詞:組織名"):
-        propernames[hyoki] = (daihyo+"/"+yomi, int(score))
+        commonnouns[hyoki] = (daihyo + "/" + yomi, int(score))
+    elif (
+        cat.startswith("名詞:固有名詞")
+        or cat.startswith("名詞:人名")
+        or cat.startswith("名詞:地名")
+        or cat.startswith("名詞:組織名")
+    ):
+        propernames[hyoki] = (daihyo + "/" + yomi, int(score))
     else:
-        catsemlist = jumanPos2Cat(daihyo+"/"+yomi, cat, caseframe)
-        lexicalitems += list(map(lambda l: lexicalitem(hyoki,
-                             "(J"+source[:3]+")", int(score), l), catsemlist))
+        catsemlist = jumanPos2Cat(daihyo + "/" + yomi, cat, caseframe)
+        lexicalitems += list(
+            map(
+                lambda l: lexicalitem(hyoki, "(J" + source[:3] + ")", int(score), l),
+                catsemlist,
+            )
+        )
 
 
 def jumanPos2Cat(daihyo: str, ct: str, caseframe: str) -> list[Cat]:
     if ct.startswith("名詞:副詞的名詞"):
         return constructSubordinateConjunction(daihyo)
     elif ct.startswith("名詞:時相名詞"):
-        return constructPredicate(daihyo, [FV.Nda, FV.Nna, FV.Nno, FV.Nni, FV.Nemp], [FV.NStem])
+        return constructPredicate(
+            daihyo, [FV.Nda, FV.Nna, FV.Nno, FV.Nni, FV.Nemp], [FV.NStem]
+        )
     elif ct.startswith("動詞:子音動詞カ行促音便形"):
         return constructVerb(daihyo, caseframe, [FV.V5IKU, FV.V5YUK], [FV.Stem])
     elif ct.startswith("動詞:子音動詞カ行"):
@@ -91,12 +124,17 @@ def jumanPos2Cat(daihyo: str, ct: str, caseframe: str) -> list[Cat]:
     elif ct.startswith("動詞:子音動詞バ行"):
         return constructVerb(daihyo, caseframe, [FV.V5b], [FV.Stem])
     elif ct.startswith("動詞:母音動詞"):
-        return constructVerb(daihyo, caseframe, [FV.V1], [FV.Stem, FV.Neg, FV.Cont, FV.NegL, FV.EuphT])
+        return constructVerb(
+            daihyo, caseframe, [FV.V1], [FV.Stem, FV.Neg, FV.Cont, FV.NegL, FV.EuphT]
+        )
     elif ct.startswith("動詞:カ変動詞"):
         return constructVerb(daihyo, caseframe, [FV.VK], [FV.Stem])
     elif ct.startswith("名詞:サ変名詞"):
-        return ((constructCommonNoun(daihyo)) + (constructVerb(daihyo, caseframe, [FV.VS, FV.VSN], [FV.Stem]))
-                + (constructPredicate(daihyo, [FV.Nda, FV.Ntar], [FV.NStem])))
+        return (
+            (constructCommonNoun(daihyo))
+            + (constructVerb(daihyo, caseframe, [FV.VS, FV.VSN], [FV.Stem]))
+            + (constructPredicate(daihyo, [FV.Nda, FV.Ntar], [FV.NStem]))
+        )
     elif ct.startswith("動詞:サ変動詞"):
         return constructVerb(daihyo, caseframe, [FV.VS], [FV.Stem])
     elif ct.startswith("動詞:ザ変動詞"):
@@ -116,11 +154,18 @@ def jumanPos2Cat(daihyo: str, ct: str, caseframe: str) -> list[Cat]:
         # 同じ
         return constructVerb(daihyo, caseframe, [FV.Nda, FV.Nna], [FV.NStem])
     elif ct.startswith("形容詞:ナノ形容詞"):
-        return constructVerb(daihyo, caseframe, [FV.Nda, FV.Nna, FV.Nno, FV.Nni], [FV.NStem])
+        return constructVerb(
+            daihyo, caseframe, [FV.Nda, FV.Nna, FV.Nno, FV.Nni], [FV.NStem]
+        )
     elif ct.startswith("形容詞:タル形容詞"):
         return constructVerb(daihyo, caseframe, [FV.Ntar, FV.Nto], [FV.Stem])
     elif ct.startswith("副詞"):
-        return (constructVerb(daihyo, caseframe, [FV.Nda, FV.Nna, FV.Nno, FV.Nni, FV.Nto, FV.Nemp], [FV.NStem])+constructCommonNoun(daihyo))
+        return constructVerb(
+            daihyo,
+            caseframe,
+            [FV.Nda, FV.Nna, FV.Nno, FV.Nni, FV.Nto, FV.Nemp],
+            [FV.NStem],
+        ) + constructCommonNoun(daihyo)
     elif ct.startswith("連体詞"):
         return constructNominalPrefix(daihyo)
     elif ct.startswith("接続詞"):
@@ -130,15 +175,19 @@ def jumanPos2Cat(daihyo: str, ct: str, caseframe: str) -> list[Cat]:
     elif ct.startswith("接頭辞:動詞接頭辞"):
         return [cat.SL(defS(verb, [FV.Stem]), defS(verb, [FV.Stem]))]
     elif ct.startswith("接頭辞:イ形容詞接頭辞"):
-        return [cat.SL(cat.BS(defS([FV.Aauo], [FV.Stem]), cat.NP([feature.F([FV.Ga])])),
-                       cat.BS(defS([FV.Aauo], [FV.Stem]),
-                              cat.NP([feature.F([FV.Ga])]))
-                       )]
+        return [
+            cat.SL(
+                cat.BS(defS([FV.Aauo], [FV.Stem]), cat.NP([feature.F([FV.Ga])])),
+                cat.BS(defS([FV.Aauo], [FV.Stem]), cat.NP([feature.F([FV.Ga])])),
+            )
+        ]
     elif ct.startswith("接頭辞:ナ形容詞接頭辞"):
-        return [cat.SL(cat.BS(defS([FV.Nda], [FV.NStem]), cat.NP([feature.F([FV.Ga])])),
-                       cat.BS(defS([FV.Nda], [FV.NStem]),
-                              cat.NP([feature.F([FV.Ga])]))
-                       )]
+        return [
+            cat.SL(
+                cat.BS(defS([FV.Nda], [FV.NStem]), cat.NP([feature.F([FV.Ga])])),
+                cat.BS(defS([FV.Nda], [FV.NStem]), cat.NP([feature.F([FV.Ga])])),
+            )
+        ]
     elif ct.startswith("接尾辞:名詞性名詞助数辞"):
         return constructNominalSuffix(daihyo)
     elif ct.startswith("接尾辞:名詞性特殊接尾辞"):
@@ -169,7 +218,9 @@ def constructCommonNoun(daihyo: str) -> list[Cat]:
     return [cat.NP([feature.F([FV.Ga])])]
 
 
-def constructVerb(daihyo: str, caseframe: str, posF: list[FV], conjF: list[FV]) -> list[Cat]:
+def constructVerb(
+    daihyo: str, caseframe: str, posF: list[FV], conjF: list[FV]
+) -> list[Cat]:
     if caseframe == "":
         caseframe = "ガ"
     caseframelist = caseframe.split("#")
@@ -185,17 +236,56 @@ def constructNominalSuffix(daihyo: str) -> list[Cat]:
 
 
 def constructConjunction(daihyo: str) -> list[Cat]:
-    return [cat.SL(
-        cat.T(False, 1, cat.S([feature.F(anyPos), feature.F([FV.Term, FV.NTerm, FV.Pre, FV.Imper]), feature.SF(2, [
-              FV.P, FV.M]), feature.SF(3, [FV.P, FV.M]), feature.SF(4, [FV.P, FV.M]), feature.F([FV.M]), feature.F([FV.M])])),
-        cat.T(False, 1, cat.S([feature.F(anyPos), feature.F([FV.Term, FV.NTerm, FV.Pre, FV.Imper]), feature.SF(2, [
-              FV.P, FV.M]), feature.SF(3, [FV.P, FV.M]), feature.SF(4, [FV.P, FV.M]), feature.F([FV.M]), feature.F([FV.M])]))
-    )]
+    return [
+        cat.SL(
+            cat.T(
+                False,
+                1,
+                cat.S(
+                    [
+                        feature.F(anyPos),
+                        feature.F([FV.Term, FV.NTerm, FV.Pre, FV.Imper]),
+                        feature.SF(2, [FV.P, FV.M]),
+                        feature.SF(3, [FV.P, FV.M]),
+                        feature.SF(4, [FV.P, FV.M]),
+                        feature.F([FV.M]),
+                        feature.F([FV.M]),
+                    ]
+                ),
+            ),
+            cat.T(
+                False,
+                1,
+                cat.S(
+                    [
+                        feature.F(anyPos),
+                        feature.F([FV.Term, FV.NTerm, FV.Pre, FV.Imper]),
+                        feature.SF(2, [FV.P, FV.M]),
+                        feature.SF(3, [FV.P, FV.M]),
+                        feature.SF(4, [FV.P, FV.M]),
+                        feature.F([FV.M]),
+                        feature.F([FV.M]),
+                    ]
+                ),
+            ),
+        )
+    ]
 
 
 def constructSubordinateConjunction(daihyo: str) -> list[Cat]:
-    return [cat.BS(
-        cat.SL(modifiableS, modifiableS),
-        cat.S([feature.F(anyPos), feature.F([FV.Attr]), feature.SF(7, [FV.P, FV.M]), feature.SF(
-            8, [FV.P, FV.M]), feature.SF(9, [FV.P, FV.M]), feature.F([FV.M]), feature.F([FV.M])])
-    )]
+    return [
+        cat.BS(
+            cat.SL(modifiableS, modifiableS),
+            cat.S(
+                [
+                    feature.F(anyPos),
+                    feature.F([FV.Attr]),
+                    feature.SF(7, [FV.P, FV.M]),
+                    feature.SF(8, [FV.P, FV.M]),
+                    feature.SF(9, [FV.P, FV.M]),
+                    feature.F([FV.M]),
+                    feature.F([FV.M]),
+                ]
+            ),
+        )
+    ]

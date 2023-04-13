@@ -5,6 +5,7 @@ from enum import Enum, auto
 
 class FeatureValue(Enum):
     """Values of syntactic features of Japanese"""
+
     V5k = auto()
     V5s = auto()
     V5t = auto()
@@ -85,6 +86,7 @@ class FeatureValue(Enum):
 @dataclass
 class F:
     """Syntactic feature"""
+
     features: list[FeatureValue]
 
     def __str__(self):
@@ -97,6 +99,7 @@ class F:
 @dataclass
 class SF:
     """Shared syntactic feature (with an index)"""
+
     index: int
     features: list[FeatureValue]
 

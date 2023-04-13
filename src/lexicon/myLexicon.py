@@ -4,10 +4,26 @@ import feature
 from feature import Feature
 from feature import FeatureValue as FV
 import cat
-from lexicon.template import modifiableS, defS, verb, anyPos, adjective, nomPred,  nonStem, lexicalitem, m5, mmmpm, verbCat, mmpmm, mpmmm, mppmm
+from lexicon.template import (
+    modifiableS,
+    defS,
+    verb,
+    anyPos,
+    adjective,
+    nomPred,
+    nonStem,
+    lexicalitem,
+    m5,
+    mmmpm,
+    verbCat,
+    mmpmm,
+    mpmmm,
+    mppmm,
+)
 from lexicon.mylexicon_hs import empty_categories, my_lexicon
 
 import lark
+
 emptyCategories: list[Node] = []
 myLexicon: list[Node] = [
     Node(
@@ -16,9 +32,8 @@ myLexicon: list[Node] = [
         cat=cat.NP([feature.F([FV.Nc])]),
         daughters=[],
         score=1,
-        source="(original)"
+        source="(original)",
     )
-
 ]
 
 
@@ -44,7 +59,11 @@ def parse_fvs(tree: lark.Token) -> list[FV]:
                 case _:
                     raise Exception("Unknown feature value: " + child.data)
 
-        if "value" in dir(child) and child.value.startswith("[") and child.value.endswith("]"):
+        if (
+            "value" in dir(child)
+            and child.value.startswith("[")
+            and child.value.endswith("]")
+        ):
             child.value = child.value[1:-1]
             # ,で区切ってFVに変換する
             fvs.extend([FV[fv.strip()] for fv in child.value.split(",")])
@@ -78,8 +97,11 @@ def parse_features(tree: lark.Token) -> list[Feature]:
                         features.append(feature.F(parse_fvs(f.children[0])))
                     case "sf_feature":
                         assert len(f.children) == 2
-                        features.append(feature.SF(
-                            int(f.children[0].value), parse_fvs(f.children[1])))
+                        features.append(
+                            feature.SF(
+                                int(f.children[0].value), parse_fvs(f.children[1])
+                            )
+                        )
                     case _:
                         raise Exception("Unknown feature: " + f.data)
             case _:
@@ -217,8 +239,7 @@ def mylex(words: list[str], source: str, cat: Cat) -> list[Node]:
 def parse_mylex_declaration(tree: lark.Token) -> list[Node]:
     assert tree.data == "mylex_declaration"
     assert len(tree.children) == 4
-    strings = [parse_string(child.value)
-               for child in tree.children[0].children]
+    strings = [parse_string(child.value) for child in tree.children[0].children]
     source = parse_string(tree.children[1].children[0].value)
     cat = parse_cat(tree.children[2])
     # sem =
@@ -232,8 +253,7 @@ def mylex2(words: list[str], source: str, value: int, cat: Cat) -> list[Node]:
 def parse_mylex2_declaration(tree: lark.Token) -> list[Node]:
     assert tree.data == "mylex2_declaration"
     assert len(tree.children) == 5
-    strings = [parse_string(child.value)
-               for child in tree.children[0].children]
+    strings = [parse_string(child.value) for child in tree.children[0].children]
     source = tree.children[1].children[0].value
     value = tree.children[2].children[0].value
     cat = parse_cat(tree.children[3])
@@ -247,11 +267,20 @@ conjSuffix wd num catpos catconj = [lexicalitem wd num 100 ((S ([SF 1 catpos, F 
 """
 
 
-def conjSuffix(word: str, source: str, catpos: list[FV], catconj: list[FV]) -> list[Node]:
-    return [lexicalitem(word, source, 100, cat.BS(
-        cat.S([feature.SF(1, catpos), feature.F(catconj)] + m5),
-        cat.S([feature.SF(1, catpos), feature.F([FV.Stem])] + m5)
-    ))]
+def conjSuffix(
+    word: str, source: str, catpos: list[FV], catconj: list[FV]
+) -> list[Node]:
+    return [
+        lexicalitem(
+            word,
+            source,
+            100,
+            cat.BS(
+                cat.S([feature.SF(1, catpos), feature.F(catconj)] + m5),
+                cat.S([feature.SF(1, catpos), feature.F([FV.Stem])] + m5),
+            ),
+        )
+    ]
 
 
 def parse_conjsuffix_declaration(tree: lark.Token) -> list[Node]:
@@ -273,11 +302,20 @@ conjNSuffix wd num catpos catconj = [lexicalitem wd num 100 ((S ([SF 1 catpos, F
 """
 
 
-def conjNSuffix(word: str, source: str, catpos: list[FV], catconj: list[FV]) -> list[Node]:
-    return [lexicalitem(word, source, 100, cat.BS(
-        cat.S([feature.SF(1, catpos), feature.F(catconj)] + m5),
-        cat.S([feature.SF(1, catpos), feature.F([FV.NStem])] + m5)
-    ))]
+def conjNSuffix(
+    word: str, source: str, catpos: list[FV], catconj: list[FV]
+) -> list[Node]:
+    return [
+        lexicalitem(
+            word,
+            source,
+            100,
+            cat.BS(
+                cat.S([feature.SF(1, catpos), feature.F(catconj)] + m5),
+                cat.S([feature.SF(1, catpos), feature.F([FV.NStem])] + m5),
+            ),
+        )
+    ]
 
 
 def parse_conjnsuffix_declaration(tree: lark.Token) -> list[Node]:
@@ -297,15 +335,16 @@ verblex wds num posF conjF daihyo cf evt = [(lexicalitem wd num 100 (verbCat cf 
 """
 
 
-def verblex(words: list[str], source: str, posF: list[FV], conjF: list[FV], daihyo: str, cf: str) -> list[Node]:
+def verblex(
+    words: list[str], source: str, posF: list[FV], conjF: list[FV], daihyo: str, cf: str
+) -> list[Node]:
     return [lexicalitem(word, source, 100, verbCat(cf, posF, conjF)) for word in words]
 
 
 def parse_verblex_declaration(tree: lark.Token) -> list[Node]:
     assert tree.data == "verblex_declaration"
     assert len(tree.children) == 7
-    strings = [parse_string(child.value)
-               for child in tree.children[0].children]
+    strings = [parse_string(child.value) for child in tree.children[0].children]
     source = parse_string(tree.children[1].children[0].value)
     fvs1 = parse_fvs(tree.children[2])
     fvs2 = parse_fvs(tree.children[3])
@@ -317,8 +356,7 @@ def parse_verblex_declaration(tree: lark.Token) -> list[Node]:
 
 def load():
     # load the parser
-    parser = lark.Lark.open("lexicon_haskell.lark",
-                            rel_to=__file__, start="start")
+    parser = lark.Lark.open("lexicon_haskell.lark", rel_to=__file__, start="start")
     # parse
     global emptyCategories
     tree = parser.parse(empty_categories)
@@ -326,8 +364,7 @@ def load():
         assert statement.data == "statement"
         match statement.children[0].data:
             case "ec_declaration":
-                emptyCategories.append(
-                    parse_ec_declaration(statement.children[0]))
+                emptyCategories.append(parse_ec_declaration(statement.children[0]))
 
             case _:
                 raise Exception(f"unknown declaration {id}")
@@ -338,30 +375,20 @@ def load():
         assert statement.data == "statement"
         match statement.children[0].data:
             case "ec_declaration":
-                myLexicon.append(
-                    parse_ec_declaration(statement.children[0]))
+                myLexicon.append(parse_ec_declaration(statement.children[0]))
             case "mylex_declaration":
-                myLexicon += parse_mylex_declaration(
-                    statement.children[0])
+                myLexicon += parse_mylex_declaration(statement.children[0])
             case "mylex2_declaration":
-                myLexicon += parse_mylex2_declaration(
-                    statement.children[0])
+                myLexicon += parse_mylex2_declaration(statement.children[0])
             case "conjsuffix_declaration":
-                myLexicon += parse_conjsuffix_declaration(
-                    statement.children[0]
-                )
+                myLexicon += parse_conjsuffix_declaration(statement.children[0])
             case "conjnsuffix_declaration":
-                myLexicon += parse_conjnsuffix_declaration(
-                    statement.children[0]
-                )
+                myLexicon += parse_conjnsuffix_declaration(statement.children[0])
             case "verblex_declaration":
-                myLexicon += parse_verblex_declaration(
-                    statement.children[0]
-                )
+                myLexicon += parse_verblex_declaration(statement.children[0])
             case _:
                 print(statement)
-                raise Exception(
-                    f"unknown declaration {statement.children[0].data}")
+                raise Exception(f"unknown declaration {statement.children[0].data}")
 
 
 load()
